@@ -1938,33 +1938,14 @@ love_group_projects(NAME "liblove" TARGETS liblove ${LOVE_EXTRA_DEPENDECIES})
 love_group_projects(NAME "lovedep" TARGETS lovedep::SDL lovedep::Freetype lovedep::Harfbuzz lovedep::OpenAL lovedep::Modplug lovedep::Theora lovedep::Vorbis lovedep::Ogg lovedep::Zlib lovedep::Lua)
 love_group_projects(NAME "lovedep" TARGETS lua51 alcommon al-excommon harfbuzz-subset zlib)
 
-
-if(MSVC)
-	set_target_properties(liblove PROPERTIES RELEASE_OUTPUT_NAME "love" PDB_NAME "liblove" IMPORT_PREFIX "lib")
-	set_target_properties(liblove PROPERTIES DEBUG_OUTPUT_NAME "love" PDB_NAME "liblove" IMPORT_PREFIX "lib")
-endif()
-
-if(MSVC OR MINGW)
-	target_link_libraries(liblove
-		ws2_32${WIN32_LIB_EXT}
-		winmm${WIN32_LIB_EXT}
-		dwmapi${WIN32_LIB_EXT}
-	)
-
-	target_sources(liblove PUBLIC
-		extra/windows/love.rc
-		extra/windows/love.ico
-	)
-endif()
-
 #
 # love (executable)
 #
 if(ANDROID)
-	add_library(love SHARED) # On Android, the LOVE main entrypoint needs to be compiled as shared library
+	add_library(love SHARED) 
 	target_link_libraries(liblove android)
 else()
-	add_executable(love WIN32)
+	add_executable(love)
 endif()
 
 target_sources(love PRIVATE src/love.cpp)
