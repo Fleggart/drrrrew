@@ -14,11 +14,7 @@ set(CMAKE_CXX_STANDARD 17)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)	# Allow grouping projects in Visual Studio
 
 
-if(MINGW)
-	message(WARNING "MinGW is not an officially supported build system for love.")
-	message(WARNING "Use megasource with Visual Studio instead.")
-	message(WARNING "Please see https://github.com/love2d/megasource")
-endif()
+
 
 include(LoveMacros)
 
@@ -1346,16 +1342,8 @@ add_library(love_3p_enet
 	src/libraries/enet/libenet/include/enet/utility.h
 	src/libraries/enet/libenet/include/enet/win32.h
 )
-love_disable_warnings(love_3p_enet)
-target_link_libraries(love_3p_enet lovedep::Lua)
-target_include_directories(love_3p_enet PUBLIC src/libraries/enet/libenet/include)
-if(MINGW)
-	target_link_libraries(love_3p_enet winmm.a)
-endif()
 
-#
 # GLAD
-#
 
 add_library(love_3p_glad
 	src/libraries/glad/glad.cpp
