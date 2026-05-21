@@ -1,6 +1,25 @@
+#
+# Copyright (c) 2006-2026 LOVE Development Team
+#
+# This software is provided 'as-is', without any express or implied
+# warranty.  In no event will the authors be held liable for any damages
+# arising from the use of this software.
+#
+# Permission is granted to anyone to use this software for any purpose,
+# including commercial applications, and to alter it and redistribute it
+# freely, subject to the following restrictions:
+#
+# 1. The origin of this software must not be misrepresented; you must not
+#    claim that you wrote the original software. If you use this software
+#    in a product, an acknowledgment in the product documentation would be
+#    appreciated but is not required.
+# 2. Altered source versions must be plainly marked as such, and must not be
+#    misrepresented as being the original software.
+# 3. This notice may not be removed or altered from any source distribution.
+#
 
 if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
-	
+	# Protip: run cmake like this: cmake -G "<generator>" -H. -Bbuild
 	message(FATAL_ERROR "Prevented in-tree build.")
 endif()
 
@@ -14,7 +33,11 @@ set(CMAKE_CXX_STANDARD 17)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)	# Allow grouping projects in Visual Studio
 
 
-
+if(MINGW)
+	message(WARNING "MinGW is not an officially supported build system for love.")
+	message(WARNING "Use megasource with Visual Studio instead.")
+	message(WARNING "Please see https://github.com/love2d/megasource")
+endif()
 
 include(LoveMacros)
 
@@ -1322,9 +1345,6 @@ add_library(love_3p_ddsparse
 #
 
 add_library(love_3p_enet
-    target_include_directories(love_3p_enet PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/libraries/enet/libenet/include
-)
 	src/libraries/enet/enet.cpp
 	src/libraries/enet/lua-enet.h
 	src/libraries/enet/libenet/callbacks.c
@@ -1345,8 +1365,16 @@ add_library(love_3p_enet
 	src/libraries/enet/libenet/include/enet/utility.h
 	src/libraries/enet/libenet/include/enet/win32.h
 )
+love_disable_warnings(love_3p_enet)
+target_link_libraries(love_3p_enet lovedep::Lua)
+target_include_directories(love_3p_enet PUBLIC src/libraries/enet/libenet/include)
+if(MINGW)
+	target_link_libraries(love_3p_enet winmm.a)
+endif()
 
+#
 # GLAD
+#
 
 add_library(love_3p_glad
 	src/libraries/glad/glad.cpp
@@ -1727,7 +1755,94 @@ add_library(love_3p_spirv_cross
 	src/libraries/spirv_cross/spirv.hpp
 )
 
+#
+# stb_image
+#
 
+# stb_image has no implementation files of its own.
+#add_library(love_3p_stb
+#	src/libraries/stb/stb_image.h
+#)
+
+#
+# tiny exr
+#
+
+# tinyexr has no implementation files of its own.
+#add_library(love_3p_tinyexr
+#	src/libraries/tinyexr/tinyexr.h
+#)
+
+#
+# utf8
+#
+
+# This library is all headers ... so there is no need to
+# add_library() here.
+#add_library(love_3p_utf8
+#	src/libraries/utf8/utf8.h
+#	src/libraries/utf8/utf8/checked.h
+#	src/libraries/utf8/utf8/core.h
+#	src/libraries/utf8/utf8/unchecked.h
+#)
+
+#
+# vma
+#
+
+# vulkan memory allocatory has no implementation files of its own.
+#add_library(love_3p_vma
+#	src/libraries/vma/vk_mem_alloc.h
+#)
+
+#
+# volk
+#
+
+# since we don't want to use the system vulkan header files we need to 
+# compile this library in the löve source code using VOLK_IMPLEMENTATION.
+#add_library(love_3p_volk 
+#	src/libraries/volk/volk.h
+#	src/libraries/volk/volk.c)
+
+#
+# vulkan headers
+#
+
+# vulkan headers has no implementation files of its own.
+#add_library(love_3p_vulkan_headers
+#	src/libraries/vulkanheaders/vk_icd.h
+#	src/libraries/vulkanheaders/vk_layer.h
+#	src/libraries/vulkanheaders/vk_platform.h
+#	src/libraries/vulkanheaders/vk_sdk-platform.h
+#	src/libraries/vulkanheaders/vulkan_android.h
+#	src/libraries/vulkanheaders/vulkan_beta.h
+#	src/libraries/vulkanheaders/vulkan_core.h
+#	src/libraries/vulkanheaders/vulkan_directfb.h
+#	src/libraries/vulkanheaders/vulkan_enums.hpp
+#	src/libraries/vulkanheaders/vulkan_format_traits.hpp
+#	src/libraries/vulkanheaders/vulkan_fuchsia.h
+#	src/libraries/vulkanheaders/vulkan_funcs.h
+#	src/libraries/vulkanheaders/vulkan_ggp.h
+#	src/libraries/vulkanheaders/vulkan_handles.h
+#	src/libraries/vulkanheaders/vulkan_hash.hpp
+#	src/libraries/vulkanheaders/vulkan_ios.h
+#	src/libraries/vulkanheaders/vulkan_macos.h
+#	src/libraries/vulkanheaders/vulkan_metal.h
+#	src/libraries/vulkanheaders/vulkan_raii.hpp
+#	src/libraries/vulkanheaders/vulkan_screen.h
+#	src/libraries/vulkanheaders/vulkan_static_assertions.h
+#	src/libraries/vulkanheaders/vulkan_structs.hpp
+#	src/libraries/vulkanheaders/vulkan_to_string.h
+#	src/libraries/vulkanheaders/vulkan_vi.h
+#	src/libraries/vulkanheaders/vulkan_wayland.h
+#	src/libraries/vulkanheaders/vulkan_win32.h
+#	src/libraries/vulkanheaders/vulkan_xcb.h
+#	src/libraries/vulkanheaders/vulkan_xlib_xrandr.h
+#	src/libraries/vulkanheaders/vulkan_xlib.h
+#	src/libraries/vulkanheaders/vulkan.h
+#	src/libraries/vulkanheaders/vulkan.hpp
+#)
 
 #
 # Wuff
@@ -1842,14 +1957,33 @@ love_group_projects(NAME "liblove" TARGETS liblove ${LOVE_EXTRA_DEPENDECIES})
 love_group_projects(NAME "lovedep" TARGETS lovedep::SDL lovedep::Freetype lovedep::Harfbuzz lovedep::OpenAL lovedep::Modplug lovedep::Theora lovedep::Vorbis lovedep::Ogg lovedep::Zlib lovedep::Lua)
 love_group_projects(NAME "lovedep" TARGETS lua51 alcommon al-excommon harfbuzz-subset zlib)
 
+
+if(MSVC)
+	set_target_properties(liblove PROPERTIES RELEASE_OUTPUT_NAME "love" PDB_NAME "liblove" IMPORT_PREFIX "lib")
+	set_target_properties(liblove PROPERTIES DEBUG_OUTPUT_NAME "love" PDB_NAME "liblove" IMPORT_PREFIX "lib")
+endif()
+
+if(MSVC OR MINGW)
+	target_link_libraries(liblove
+		ws2_32${WIN32_LIB_EXT}
+		winmm${WIN32_LIB_EXT}
+		dwmapi${WIN32_LIB_EXT}
+	)
+
+	target_sources(liblove PUBLIC
+		extra/windows/love.rc
+		extra/windows/love.ico
+	)
+endif()
+
 #
 # love (executable)
 #
 if(ANDROID)
-	add_library(love SHARED) 
+	add_library(love SHARED) # On Android, the LOVE main entrypoint needs to be compiled as shared library
 	target_link_libraries(liblove android)
 else()
-	add_executable(love)
+	add_executable(love WIN32)
 endif()
 
 target_sources(love PRIVATE src/love.cpp)
