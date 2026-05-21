@@ -23,7 +23,7 @@ if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
 	message(FATAL_ERROR "Prevented in-tree build.")
 endif()
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.19)
 
 project(love)
 
@@ -31,6 +31,11 @@ set(CMAKE_MODULE_PATH "${love_SOURCE_DIR}/extra/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE) # Needed for shared libs on Linux. (-fPIC).
 set(CMAKE_CXX_STANDARD 17)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)	# Allow grouping projects in Visual Studio
+
+if(APPLE)
+	message(WARNING "CMake is not an officially supported build system for love on Apple platforms.")
+	message(WARNING "Use the prebuilt .app or the xcode project in platform/xcode/ instead.")
+endif()
 
 if(MINGW)
 	message(WARNING "MinGW is not an officially supported build system for love.")
@@ -77,9 +82,22 @@ else()
 endif()
 
 
-
+if(APPLE)
+	set(LOVE_DEFAULT_JIT FALSE)
+else()
+	set(LOVE_DEFAULT_JIT TRUE)
+endif()
 
 option(LOVE_JIT "Use LuaJIT" ${LOVE_DEFAULT_JIT})
+
+if(LOVE_JIT)
+	if(APPLE)
+		message(WARNING "JIT not supported yet on Mac.")
+	endif()
+	message(STATUS "LuaJIT: Enabled")
+else()
+	message(STATUS "LuaJIT: Disabled")
+endif()
 
 message(STATUS "Target platform: ${LOVE_TARGET_PLATFORM}")
 
@@ -635,8 +653,34 @@ target_link_libraries(love_graphics INTERFACE
 	love_graphics_opengl
 )
 
-
-	
+if(APPLE)
+	add_library(love_graphics_metal STATIC
+		src/modules/graphics/metal/Buffer.h
+		src/modules/graphics/metal/Buffer.mm
+		src/modules/graphics/metal/Graphics.h
+		src/modules/graphics/metal/Graphics.mm
+		src/modules/graphics/metal/GraphicsReadback.h
+		src/modules/graphics/metal/GraphicsReadback.mm
+		src/modules/graphics/metal/Metal.h
+		src/modules/graphics/metal/Metal.mm
+		src/modules/graphics/metal/Shader.h
+		src/modules/graphics/metal/Shader.mm
+		src/modules/graphics/metal/ShaderStage.h
+		src/modules/graphics/metal/ShaderStage.mm
+		src/modules/graphics/metal/StreamBuffer.h
+		src/modules/graphics/metal/StreamBuffer.mm
+		src/modules/graphics/metal/Texture.h
+		src/modules/graphics/metal/Texture.mm
+	)
+	target_link_libraries(love_graphics_metal PUBLIC
+		objc
+		"-framework Metal"
+		"-framework QuartzCore"
+	)
+	target_link_libraries(love_graphics INTERFACE
+		love_graphics_metal
+	)
+else()
 	add_library(love_graphics_vulkan STATIC
 		src/modules/graphics/vulkan/Graphics.h
 		src/modules/graphics/vulkan/Graphics.cpp
@@ -1599,6 +1643,14 @@ add_library(love_3p_luahttps
 )
 target_link_libraries(love_3p_luahttps lovedep::Lua)
 
+if (APPLE)
+	target_sources(love_3p_luahttps PRIVATE
+		src/libraries/luahttps/src/apple/NSURLClient.mm
+		src/libraries/luahttps/src/apple/NSURLClient.h
+	)
+	target_compile_options(love_3p_luahttps PRIVATE -fobjc-arc)
+endif()
+
 if(MSVC)
 	target_link_libraries(love_3p_luahttps
 		ws2_32
@@ -1672,7 +1724,14 @@ add_library(love_3p_physfs
 )
 love_disable_warnings(love_3p_physfs)
 
-
+if(APPLE)
+	target_sources(love_3p_physfs PRIVATE
+		src/libraries/physfs/physfs_platform_apple.m
+	)
+	target_link_libraries(love_3p_physfs INTERFACE
+		"-framework IOKit"
+	)
+endif()
 
 #
 # spirv_cross
