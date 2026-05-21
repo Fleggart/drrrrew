@@ -80,6 +80,15 @@ endif()
 
 option(LOVE_JIT "Use LuaJIT" ${LOVE_DEFAULT_JIT})
 
+if(LOVE_JIT)
+	if(APPLE)
+		message(WARNING "JIT not supported yet on Mac.")
+	endif()
+	message(STATUS "LuaJIT: Enabled")
+else()
+	message(STATUS "LuaJIT: Disabled")
+endif()
+
 message(STATUS "Target platform: ${LOVE_TARGET_PLATFORM}")
 
 add_library(lovedep::SDL INTERFACE IMPORTED)
@@ -634,7 +643,34 @@ target_link_libraries(love_graphics INTERFACE
 	love_graphics_opengl
 )
 
-
+if(APPLE)
+	add_library(love_graphics_metal STATIC
+		src/modules/graphics/metal/Buffer.h
+		src/modules/graphics/metal/Buffer.mm
+		src/modules/graphics/metal/Graphics.h
+		src/modules/graphics/metal/Graphics.mm
+		src/modules/graphics/metal/GraphicsReadback.h
+		src/modules/graphics/metal/GraphicsReadback.mm
+		src/modules/graphics/metal/Metal.h
+		src/modules/graphics/metal/Metal.mm
+		src/modules/graphics/metal/Shader.h
+		src/modules/graphics/metal/Shader.mm
+		src/modules/graphics/metal/ShaderStage.h
+		src/modules/graphics/metal/ShaderStage.mm
+		src/modules/graphics/metal/StreamBuffer.h
+		src/modules/graphics/metal/StreamBuffer.mm
+		src/modules/graphics/metal/Texture.h
+		src/modules/graphics/metal/Texture.mm
+	)
+	target_link_libraries(love_graphics_metal PUBLIC
+		objc
+		"-framework Metal"
+		"-framework QuartzCore"
+	)
+	target_link_libraries(love_graphics INTERFACE
+		love_graphics_metal
+	)
+else()
 	add_library(love_graphics_vulkan STATIC
 		src/modules/graphics/vulkan/Graphics.h
 		src/modules/graphics/vulkan/Graphics.cpp
@@ -1596,6 +1632,14 @@ add_library(love_3p_luahttps
 	src/libraries/luahttps/src/windows/WinINetClient.h
 )
 target_link_libraries(love_3p_luahttps lovedep::Lua)
+
+if (APPLE)
+	target_sources(love_3p_luahttps PRIVATE
+		src/libraries/luahttps/src/apple/NSURLClient.mm
+		src/libraries/luahttps/src/apple/NSURLClient.h
+	)
+	target_compile_options(love_3p_luahttps PRIVATE -fobjc-arc)
+endif()
 
 if(MSVC)
 	target_link_libraries(love_3p_luahttps
