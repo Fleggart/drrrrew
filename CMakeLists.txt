@@ -1322,6 +1322,7 @@ add_library(love_3p_ddsparse
 #
 
 add_library(love_3p_enet
+    target_include_directories(love_3p_enet PRIVATE src/libraries/enet/libenet/include)
 	src/libraries/enet/enet.cpp
 	src/libraries/enet/lua-enet.h
 	src/libraries/enet/libenet/callbacks.c
