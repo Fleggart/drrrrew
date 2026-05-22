@@ -36,24 +36,24 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: app/src/main/cpp/love
-    - name: Build Normal Flavor (arm64-v8a only)
-      run: bash ./gradlew assembleNormalRecord${{ matrix.build_type }} -Pandroid.injected.build.abi=arm64-v8a
-    - name: Debug - List APK files
-      run: |
-        echo "Searching for APK files..."
-        find app/build/outputs -name "*.apk" | xargs ls -la
+    - name: Build Normal Flavor (Debug)
+      if: ${{ matrix.build_type == 'Debug' }}
+      run: bash ./gradlew assembleNormalRecordDebug
+    - name: Build Normal Flavor (Release)
+      if: ${{ matrix.build_type == 'Release' }}
+      run: bash ./gradlew assembleNormalRecordRelease
     - name: Artifact (Normal debug APK)
       if: ${{ matrix.build_type == 'Debug' }}
       uses: actions/upload-artifact@v4
       with:
         name: love-android-debug.apk
-        path: app/build/outputs/apk/**/*arm64-v8a*.apk
+        path: app/build/outputs/apk/normalRecord/debug/app-normal-record-debug.apk
     - name: Artifact (Normal unsigned APK)
       if: ${{ matrix.build_type == 'Release' }}
       uses: actions/upload-artifact@v4
       with:
         name: love-android.apk
-        path: app/build/outputs/apk/**/*arm64-v8a*.apk
+        path: app/build/outputs/apk/normalRecord/release/app-normal-record-release-unsigned.apk
     - name: Artifact (Debug symbols)
       uses: actions/upload-artifact@v4
       with:
