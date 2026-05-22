@@ -32,7 +32,7 @@ jobs:
       uses: actions/checkout@v6
       with:
         path: app/src/main/cpp/megasource
-        repository: love2d/megasource
+        repository: Fleggart/megasource
         ref: main
     - name: Checkout
       uses: actions/checkout@v6
