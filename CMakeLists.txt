@@ -32,6 +32,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE) # Needed for shared libs on Linux. (-f
 set(CMAKE_CXX_STANDARD 17)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)	# Allow grouping projects in Visual Studio
 
+if(APPLE)
+	message(WARNING "CMake is not an officially supported build system for love on Apple platforms.")
+	message(WARNING "Use the prebuilt .app or the xcode project in platform/xcode/ instead.")
+endif()
 
 if(MINGW)
 	message(WARNING "MinGW is not an officially supported build system for love.")
@@ -77,6 +81,12 @@ else()
 	set(LOVE_TARGET_PLATFORM x86)
 endif()
 
+
+if(APPLE)
+	set(LOVE_DEFAULT_JIT FALSE)
+else()
+	set(LOVE_DEFAULT_JIT TRUE)
+endif()
 
 option(LOVE_JIT "Use LuaJIT" ${LOVE_DEFAULT_JIT})
 
