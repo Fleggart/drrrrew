@@ -32,16 +32,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE) # Needed for shared libs on Linux. (-f
 set(CMAKE_CXX_STANDARD 17)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)	# Allow grouping projects in Visual Studio
 
-if(APPLE)
-	message(WARNING "CMake is not an officially supported build system for love on Apple platforms.")
-	message(WARNING "Use the prebuilt .app or the xcode project in platform/xcode/ instead.")
-endif()
-
-if(MINGW)
-	message(WARNING "MinGW is not an officially supported build system for love.")
-	message(WARNING "Use megasource with Visual Studio instead.")
-	message(WARNING "Please see https://github.com/love2d/megasource")
-endif()
+# Removed Apple warning block
 
 include(LoveMacros)
 
@@ -82,18 +73,12 @@ else()
 endif()
 
 
-if(APPLE)
-	set(LOVE_DEFAULT_JIT FALSE)
-else()
-	set(LOVE_DEFAULT_JIT TRUE)
-endif()
+# Removed Apple-specific JIT default
+set(LOVE_DEFAULT_JIT TRUE)
 
 option(LOVE_JIT "Use LuaJIT" ${LOVE_DEFAULT_JIT})
 
 if(LOVE_JIT)
-	if(APPLE)
-		message(WARNING "JIT not supported yet on Mac.")
-	endif()
 	message(STATUS "LuaJIT: Enabled")
 else()
 	message(STATUS "LuaJIT: Disabled")
@@ -113,29 +98,6 @@ add_library(lovedep::Zlib INTERFACE IMPORTED)
 add_library(lovedep::Lua INTERFACE IMPORTED)
 
 if(MEGA)
-	# LOVE_MSVC_DLLS contains runtime DLLs that should be bundled with the love
-	# binary (in e.g. the installer). Example: msvcp140.dll.
-	set(LOVE_MSVC_DLLS ${MEGA_MSVC_DLLS})
-
-	# These DLLs are moved next to the love binary in a post-build step to
-	# love runnable from inside Visual Studio.
-	#
-	# LOVE_MOVE_DLLS can contain CMake targets, in which case the target's
-	# output is assumed to be a DLL, or it can contain paths to actual files.
-	# We detect whether or not each item is a target, and take the appropriate
-	# action.
-	set(LOVE_MOVE_DLLS
-		${MEGA_SDL3}
-		${MEGA_OPENAL}
-	)
-
-	# LOVE_EXTRA_DLLS are non-runtime DLLs which should be bundled with the
-	# love binary in installers, etc. It's only needed for external
-	# (non-CMake) targets, i.e. LuaJIT.
-	if(NOT DEFINED LOVE_EXTRA_DLLS)
-		set(LOVE_EXTRA_DLLS)
-	endif()
-
 	target_link_libraries(lovedep::SDL INTERFACE ${MEGA_SDL3})
 	target_link_libraries(lovedep::Freetype INTERFACE ${MEGA_FREETYPE})
 	target_link_libraries(lovedep::Harfbuzz INTERFACE ${MEGA_HARFBUZZ})
@@ -149,29 +111,11 @@ if(MEGA)
 	if(LOVE_JIT)
 		target_include_directories(lovedep::Lua INTERFACE ${MEGA_LUAJIT_INCLUDE})
 		target_link_libraries(lovedep::Lua INTERFACE ${MEGA_LUAJIT_LIB})
-		set(LOVE_EXTRA_DLLS ${LOVE_EXTRA_DLLS} ${MEGA_LUAJIT_DLL})
 		set(LOVE_EXTRA_DEPENDECIES luajit)
-		set(LOVE_MOVE_DLLS
-			${LOVE_MOVE_DLLS}
-			${MEGA_LUAJIT_DLL}
-		)
 	else()
-		# MEGA_LUA51 is a CMake target, so includes are handled
-		# automatically.
 		target_link_libraries(lovedep::Lua INTERFACE ${MEGA_LUA51})
-		set(LOVE_MOVE_DLLS
-			${LOVE_MOVE_DLLS}
-			${MEGA_LUA51}
-		)
 	endif()
 else()
-	if(MSVC OR ANDROID)
-		message(FATAL_ERROR "
-It is currently only possible to build with megasource on Windows and Android.
-Please see https://github.com/love2d/megasource
-")
-	endif()
-
 	# required for enet
 	add_definitions(-D HAS_SOCKLEN_T)
 
@@ -295,30 +239,7 @@ target_link_libraries(love_common PUBLIC
 	lovedep::SDL
 )
 
-if (APPLE)
-	target_sources(love_common PRIVATE
-		src/common/apple.mm
-	)
-	target_link_libraries(love_common PUBLIC
-		objc
-		"-framework CoreFoundation"
-	)
-	if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-		target_sources(love_common PRIVATE
-			src/common/macos.mm
-		)
-		target_link_libraries(love_common PUBLIC
-			"-framework AppKit"
-		)
-	else()
-		target_sources(love_common PRIVATE
-			src/common/ios.mm
-		)
-		target_link_libraries(love_common PUBLIC
-			"-framework UIKit"
-		)
-	endif()
-endif()
+# Removed Apple-specific source files for love_common (apple.mm, macos.mm, ios.mm)
 
 #
 # love.audio
@@ -653,60 +574,33 @@ target_link_libraries(love_graphics INTERFACE
 	love_graphics_opengl
 )
 
-if(APPLE)
-	add_library(love_graphics_metal STATIC
-		src/modules/graphics/metal/Buffer.h
-		src/modules/graphics/metal/Buffer.mm
-		src/modules/graphics/metal/Graphics.h
-		src/modules/graphics/metal/Graphics.mm
-		src/modules/graphics/metal/GraphicsReadback.h
-		src/modules/graphics/metal/GraphicsReadback.mm
-		src/modules/graphics/metal/Metal.h
-		src/modules/graphics/metal/Metal.mm
-		src/modules/graphics/metal/Shader.h
-		src/modules/graphics/metal/Shader.mm
-		src/modules/graphics/metal/ShaderStage.h
-		src/modules/graphics/metal/ShaderStage.mm
-		src/modules/graphics/metal/StreamBuffer.h
-		src/modules/graphics/metal/StreamBuffer.mm
-		src/modules/graphics/metal/Texture.h
-		src/modules/graphics/metal/Texture.mm
-	)
-	target_link_libraries(love_graphics_metal PUBLIC
-		objc
-		"-framework Metal"
-		"-framework QuartzCore"
-	)
-	target_link_libraries(love_graphics INTERFACE
-		love_graphics_metal
-	)
-else()
-	add_library(love_graphics_vulkan STATIC
-		src/modules/graphics/vulkan/Graphics.h
-		src/modules/graphics/vulkan/Graphics.cpp
-		src/modules/graphics/vulkan/GraphicsReadback.h
-		src/modules/graphics/vulkan/GraphicsReadback.cpp
-		src/modules/graphics/vulkan/Shader.h
-		src/modules/graphics/vulkan/Shader.cpp
-		src/modules/graphics/vulkan/ShaderStage.h
-		src/modules/graphics/vulkan/ShaderStage.cpp
-		src/modules/graphics/vulkan/StreamBuffer.h
-		src/modules/graphics/vulkan/StreamBuffer.cpp
-		src/modules/graphics/vulkan/Buffer.h
-		src/modules/graphics/vulkan/Buffer.cpp
-		src/modules/graphics/vulkan/Texture.h
-		src/modules/graphics/vulkan/Texture.cpp
-		src/modules/graphics/vulkan/Vulkan.h
-		src/modules/graphics/vulkan/Vulkan.cpp
-		src/modules/graphics/vulkan/VulkanWrapper.h
-	)
-	target_link_libraries(love_graphics_vulkan PUBLIC
-		lovedep::SDL
-	)
-	target_link_libraries(love_graphics INTERFACE
-		love_graphics_vulkan
-	)
-endif()
+# Removed Apple Metal graphics backend, always use Vulkan on non-Apple platforms
+
+add_library(love_graphics_vulkan STATIC
+	src/modules/graphics/vulkan/Graphics.h
+	src/modules/graphics/vulkan/Graphics.cpp
+	src/modules/graphics/vulkan/GraphicsReadback.h
+	src/modules/graphics/vulkan/GraphicsReadback.cpp
+	src/modules/graphics/vulkan/Shader.h
+	src/modules/graphics/vulkan/Shader.cpp
+	src/modules/graphics/vulkan/ShaderStage.h
+	src/modules/graphics/vulkan/ShaderStage.cpp
+	src/modules/graphics/vulkan/StreamBuffer.h
+	src/modules/graphics/vulkan/StreamBuffer.cpp
+	src/modules/graphics/vulkan/Buffer.h
+	src/modules/graphics/vulkan/Buffer.cpp
+	src/modules/graphics/vulkan/Texture.h
+	src/modules/graphics/vulkan/Texture.cpp
+	src/modules/graphics/vulkan/Vulkan.h
+	src/modules/graphics/vulkan/Vulkan.cpp
+	src/modules/graphics/vulkan/VulkanWrapper.h
+)
+target_link_libraries(love_graphics_vulkan PUBLIC
+	lovedep::SDL
+)
+target_link_libraries(love_graphics INTERFACE
+	love_graphics_vulkan
+)
 
 #
 # love.image
@@ -1055,8 +949,8 @@ add_library(love_sound_lullaby STATIC
 	src/modules/sound/lullaby/FLACDecoder.h
 	src/modules/sound/lullaby/ModPlugDecoder.cpp
 	src/modules/sound/lullaby/ModPlugDecoder.h
-	src/modules/sound/lullaby/MP3Decoder.h
 	src/modules/sound/lullaby/MP3Decoder.cpp
+	src/modules/sound/lullaby/MP3Decoder.h
 	src/modules/sound/lullaby/Sound.cpp
 	src/modules/sound/lullaby/Sound.h
 	src/modules/sound/lullaby/VorbisDecoder.cpp
@@ -1378,9 +1272,6 @@ add_library(love_3p_enet
 love_disable_warnings(love_3p_enet)
 target_link_libraries(love_3p_enet lovedep::Lua)
 target_include_directories(love_3p_enet PUBLIC src/libraries/enet/libenet/include)
-if(MINGW)
-	target_link_libraries(love_3p_enet winmm.a)
-endif()
 
 #
 # GLAD
@@ -1520,12 +1411,6 @@ add_library(love_3p_lodepng
 # luasocket
 #
 
-if(MINGW)
-	set(WIN32_LIB_EXT .a)
-else()
-	set(WIN32_LIB_EXT .lib)
-endif()
-
 add_library(love_3p_luasocket
 	src/libraries/luasocket/luasocket.cpp
 	src/libraries/luasocket/luasocket.h
@@ -1584,7 +1469,7 @@ if(MSVC OR MINGW)
 	)
 
 	target_link_libraries(love_3p_luasocket
-		ws2_32${WIN32_LIB_EXT}
+		ws2_32
 	)
 else()
 	target_sources(love_3p_luasocket PRIVATE
@@ -1635,34 +1520,12 @@ add_library(love_3p_luahttps
 	src/libraries/luahttps/src/generic/OpenSSLConnection.h
 	src/libraries/luahttps/src/generic/UnixLibraryLoader.cpp
 	src/libraries/luahttps/src/lua/main.cpp
-	src/libraries/luahttps/src/windows/SChannelConnection.cpp
-	src/libraries/luahttps/src/windows/SChannelConnection.h
-	src/libraries/luahttps/src/windows/WindowsLibraryLoader.cpp
-	src/libraries/luahttps/src/windows/WinINetClient.cpp
-	src/libraries/luahttps/src/windows/WinINetClient.h
+	# Removed Windows-specific files
+	# Removed Apple-specific files (will be handled by Unix generic code on macOS)
 )
 target_link_libraries(love_3p_luahttps lovedep::Lua)
 
-if (APPLE)
-	target_sources(love_3p_luahttps PRIVATE
-		src/libraries/luahttps/src/apple/NSURLClient.mm
-		src/libraries/luahttps/src/apple/NSURLClient.h
-	)
-	target_compile_options(love_3p_luahttps PRIVATE -fobjc-arc)
-endif()
-
-if(MSVC)
-	target_link_libraries(love_3p_luahttps
-		ws2_32
-		secur32
-	)
-
-	if(NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-		target_link_libraries(love_3p_luahttps
-			wininet
-		)
-	endif()
-endif()
+# Removed Apple-specific NSURLClient source addition
 
 #
 # lz4
@@ -1724,14 +1587,7 @@ add_library(love_3p_physfs
 )
 love_disable_warnings(love_3p_physfs)
 
-if(APPLE)
-	target_sources(love_3p_physfs PRIVATE
-		src/libraries/physfs/physfs_platform_apple.m
-	)
-	target_link_libraries(love_3p_physfs INTERFACE
-		"-framework IOKit"
-	)
-endif()
+# Removed Apple-specific IOKit framework linking
 
 #
 # spirv_cross
@@ -1889,12 +1745,6 @@ include_directories(
 	src/modules
 )
 
-if(MINGW)
-	# UTF-16 flags passed to windres. windres invokes gcc as preprocessor
-	# -> gcc outputs utf8, so windres must read-in codepage 65001 (utf8)
-	set(CMAKE_RC_FLAGS ${CMAKE_RC_FLAGS} "-c 65001 --preprocessor-arg=-finput-charset=UTF-16LE")
-endif()
-
 add_library(liblove SHARED
 	src/modules/love/love.cpp
 	src/modules/love/love.h
@@ -1967,25 +1817,6 @@ love_group_projects(NAME "liblove" TARGETS liblove ${LOVE_EXTRA_DEPENDECIES})
 love_group_projects(NAME "lovedep" TARGETS lovedep::SDL lovedep::Freetype lovedep::Harfbuzz lovedep::OpenAL lovedep::Modplug lovedep::Theora lovedep::Vorbis lovedep::Ogg lovedep::Zlib lovedep::Lua)
 love_group_projects(NAME "lovedep" TARGETS lua51 alcommon al-excommon harfbuzz-subset zlib)
 
-
-if(MSVC)
-	set_target_properties(liblove PROPERTIES RELEASE_OUTPUT_NAME "love" PDB_NAME "liblove" IMPORT_PREFIX "lib")
-	set_target_properties(liblove PROPERTIES DEBUG_OUTPUT_NAME "love" PDB_NAME "liblove" IMPORT_PREFIX "lib")
-endif()
-
-if(MSVC OR MINGW)
-	target_link_libraries(liblove
-		ws2_32${WIN32_LIB_EXT}
-		winmm${WIN32_LIB_EXT}
-		dwmapi${WIN32_LIB_EXT}
-	)
-
-	target_sources(liblove PUBLIC
-		extra/windows/love.rc
-		extra/windows/love.ico
-	)
-endif()
-
 #
 # love (executable)
 #
@@ -1993,7 +1824,7 @@ if(ANDROID)
 	add_library(love SHARED) # On Android, the LOVE main entrypoint needs to be compiled as shared library
 	target_link_libraries(liblove android)
 else()
-	add_executable(love WIN32)
+	add_executable(love)
 endif()
 
 target_sources(love PRIVATE src/love.cpp)
@@ -2004,152 +1835,10 @@ set_target_properties(love PROPERTIES
 	VISIBILITY_INLINES_HIDDEN ON
 	OUTPUT_NAME ${LOVE_EXE_NAME})
 
-if(MSVC OR MINGW)
-	add_executable(lovec src/love.cpp)
-	target_link_libraries(lovec liblove)
-	set_target_properties(lovec PROPERTIES
-		OUTPUT_NAME ${LOVE_CONSOLE_EXE_NAME})
-endif()
-
-function(post_step_move_dll ARG_POST_TARGET ARG_TARGET_OR_FILE)
-	if(TARGET ${ARG_TARGET_OR_FILE})
-		add_custom_command(TARGET ${ARG_POST_TARGET} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy
-			$<TARGET_FILE:${ARG_TARGET_OR_FILE}>
-			${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/$<TARGET_FILE_NAME:${ARG_TARGET_OR_FILE}>)
-	else()
-		get_filename_component(TEMP_FILENAME ${ARG_TARGET_OR_FILE} NAME)
-		add_custom_command(TARGET ${ARG_POST_TARGET} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy
-			${ARG_TARGET_OR_FILE}
-			${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${TEMP_FILENAME})
-	endif()
-endfunction()
-
-# Add post build steps to move the DLLs next to the binary. Otherwise
-# running/debugging the binary will not work from inside VS.
-if(LOVE_MOVE_DLLS)
-	foreach(DLL ${LOVE_MOVE_DLLS})
-		post_step_move_dll(love ${DLL})
-	endforeach()
-endif()
-
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
-	###################################
-	# CPack
-	###################################
-	install(TARGETS love lovec liblove RUNTIME DESTINATION .)
-	install(PROGRAMS $<TARGET_FILE:${MEGA_SDL3}> DESTINATION .)
-
-	# Our install script (and NSIS) doesn't fully support Windows ARM64 yet.
-	if(MEGA_ARM64)
-		set(CPACK_GENERATOR ZIP)
-		set(CPACK_SYSTEM_NAME woa64)
-	else()
-		set(CPACK_GENERATOR ZIP NSIS)
-	endif()
-
-	# Extra DLLs.
-	if(LOVE_EXTRA_DLLS)
-		foreach(DLL ${LOVE_EXTRA_DLLS})
-			get_filename_component(DLL_NAME ${DLL} NAME)
-			message(STATUS "Extra DLL: ${DLL_NAME}")
-		endforeach()
-		install(FILES ${LOVE_EXTRA_DLLS} DESTINATION .)
-	endif()
-
-	# Dynamic runtime libs.
-	if(LOVE_MSVC_DLLS)
-		foreach(DLL ${LOVE_MSVC_DLLS})
-			get_filename_component(DLL_NAME ${DLL} NAME)
-			message(STATUS "Runtime DLL: ${DLL_NAME}")
-		endforeach()
-		install(FILES ${LOVE_MSVC_DLLS} DESTINATION .)
-	endif()
-
-	# Copy a text file from CMAKE_CURRENT_SOURCE_DIR to CMAKE_CURRENT_BINARY_DIR.
-	# On Windows, this function will convert line endings to CR,LF.
-	function(copy_text_file ARG_FILE_IN ARG_FILE_OUT)
-		file(READ ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_FILE_IN} TMP_TXT_CONTENTS)
-		file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${ARG_FILE_OUT} ${TMP_TXT_CONTENTS})
-	endfunction()
-
-	# Text files.
-	copy_text_file(readme.md readme.txt)
-	copy_text_file(license.txt license.txt)
-	copy_text_file(changes.txt changes.txt)
-
-	install(FILES
-			${CMAKE_CURRENT_BINARY_DIR}/changes.txt
-			${CMAKE_CURRENT_BINARY_DIR}/license.txt
-			${CMAKE_CURRENT_BINARY_DIR}/readme.txt
-			DESTINATION .)
-
-	# Icons
-	install(FILES
-			${CMAKE_CURRENT_SOURCE_DIR}/extra/nsis/love.ico
-			${CMAKE_CURRENT_SOURCE_DIR}/extra/nsis/game.ico
-			DESTINATION .)
-
-	set(CPACK_PACKAGE_NAME "love")
-	set(CPACK_PACKAGE_VENDOR "love2d.org")
-	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "LOVE -- It's awesome")
-	set(CPACK_PACKAGE_VERSION "${LOVE_VERSION_STR}")
-	set(CPACK_PACKAGE_VERSION_MAJOR "${LOVE_VERSION_MAJOR}")
-	set(CPACK_PACKAGE_VERSION_MINOR "${LOVE_VERSION_MINOR}")
-	set(CPACK_PACKAGE_VERSION_PATCH "${LOVE_VERSION_REV}")
-	set(CPACK_PACKAGE_INSTALL_DIRECTORY "LOVE")
-	set(CPACK_PACKAGE_EXECUTABLES "${LOVE_EXE_NAME};LOVE")
-	set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/readme.md")
-	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/license.txt")
-
-	set(CPACK_NSIS_EXECUTABLES_DIRECTORY .)
-	set(CPACK_NSIS_PACKAGE_NAME "LOVE")
-	set(CPACK_NSIS_DISPLAY_NAME "LOVE ${LOVE_VERSION_STR}")
-	set(CPACK_NSIS_MODIFY_PATH ON)
-
-	if(LOVE_X64)
-		set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
-	else()
-		set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES")
-	endif()
-
-	set(CPACK_NSIS_MENU_LINKS "http://love2d.org/wiki" "Documentation")
-
-	# Some bug somewhere in NSIS requires "\\\\" somewhere in the path,
-	# according to The Internet. (And sure enough, it does not work
-	# without it).
-	set(NSIS_LEFT_BMP "${CMAKE_CURRENT_SOURCE_DIR}/extra/nsis\\\\left.bmp")
-	set(NSIS_TOP_BMP "${CMAKE_CURRENT_SOURCE_DIR}/extra/nsis\\\\top.bmp")
-	set(NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/extra/nsis\\\\love.ico")
-	set(NSIS_MUI_UNICON "${CMAKE_CURRENT_SOURCE_DIR}/extra/nsis\\\\love.ico")
-
-	set(CPACK_NSIS_INSTALLER_MUI_ICON_CODE "
-		!define MUI_WELCOMEPAGE_TITLE \\\"LOVE ${LOVE_VERSION_STR} Setup\\\"
-		!define MUI_WELCOMEFINISHPAGE_BITMAP \\\"${NSIS_LEFT_BMP}\\\"
-		!define MUI_HEADERIMAGE_BITMAP \\\"${NSIS_TOP_BMP}\\\"
-		!define MUI_ICON \\\"${NSIS_MUI_ICON}\\\"
-		!define MUI_UNICON \\\"${NSIS_MUI_UNICON}\\\"
-	")
-
-	set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
-		WriteRegStr HKCR \\\".love\\\" \\\"\\\" \\\"LOVE\\\"
-		WriteRegStr HKCR \\\"LOVE\\\" \\\"\\\" \\\"LOVE Game File\\\"
-		WriteRegStr HKCR \\\"LOVE\\\\DefaultIcon\\\" \\\"\\\" \\\"$INSTDIR\\\\game.ico\\\"
-		WriteRegStr HKCR \\\"LOVE\\\\shell\\\" \\\"\\\" \\\"open\\\"
-		WriteRegStr HKCR \\\"LOVE\\\\shell\\\\open\\\" \\\"\\\" \\\"Open in LOVE\\\"
-		WriteRegStr HKCR \\\"LOVE\\\\shell\\\\open\\\\command\\\" \\\"\\\" \\\"$INSTDIR\\\\love.exe $\\\\\\\"%1$\\\\\\\"\\\"
-		System::Call 'shell32.dll::SHChangeNotify(i, i, i, i) v  (0x08000000, 0, 0, 0)'
-	")
-
-	set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
-		DeleteRegKey HKCR \\\"LOVE\\\"
-		DeleteRegKey HKCR \\\".love\\\"
-		System::Call 'shell32.dll::SHChangeNotify(i, i, i, i) v  (0x08000000, 0, 0, 0)'
-	")
-
-	include(CPack)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+#
+# Linux installation
+#
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 	include(GNUInstallDirs)
 
 	string(TIMESTAMP LOVE_CONFIGURE_TIMESTAMP "%a, %d %b %Y %H:%M:%S +0000" UTC)
